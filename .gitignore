@@ -1,0 +1,36 @@
+# Ignore built files
+/build/
+/bin/
+/lib/
+
+# Ignore CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+CMakeLists.txt.user
+
+# Ignore compiled binaries and executables
+*.o
+*.a
+*.so
+*.dll
+*.exe
+
+# Ignore any backup files
+*~
+
+# Ignore logs and temp files
+*.log
+*.swp
+
+# Ignore system-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore config files that may contain sensitive information
+# config/mysql.conf
+
+# Ignore IDE-specific files
+.vscode/
+.idea/
