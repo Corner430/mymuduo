@@ -25,9 +25,15 @@
 
 #### 5 InetAddress 类
 
-1. `sockaddr_in` 的使用
+1. `sockaddr_in`,`bzero` 的使用
 2. `htonl`, `ntohl`, `htons`, `ntohs` 函数的使用
     1. `htonl`: host to network long, 将主机字节序转换为网络字节序
     2. `htons`: host to network short, 将主机字节序转换为网络字节序
     3. `ntohl`: network to host long, 将网络字节序转换为主机字节序
     4. `ntohs`: network to host short, 将网络字节序转换为主机字节序
+3. 不再解析 ipv6 地址
+
+#### 6 Channel 类
+
+1. 创建 Channel 文件，创建 TcpServer, EventLoop 空实现文件
+2. **明确 TcpServer 是对外的服务器编程使用的类，EventLoop 是事件循环类，Channel 是 fd 和事件的封装类，Poller 是对 epoll 的封装类**
