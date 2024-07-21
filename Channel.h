@@ -35,7 +35,7 @@ public:
 
   int fd() const { return fd_; }
   int events() const { return events_; }
-  int set_revents(int revt) { revents_ = revt; }
+  void set_revents(int revt) { revents_ = revt; } // used by pollers
 
   // 设置 fd 相应的事件状态，epoll_ctl 操作
   void enableReading() {
