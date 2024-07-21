@@ -2,7 +2,7 @@
 #include "noncopyable.h"
 #include <string>
 
-// 用于记录信息级别日志的宏。
+// 用于记录信息级别日志的宏
 // 使用方法: LOG_INFO("%s %d", arg1, arg2)
 #define LOG_INFO(logmsgFormat, ...)                                            \
   do {                                                                         \
@@ -13,7 +13,7 @@
     logger.log(buf);                                                           \
   } while (0)
 
-// 用于记录错误级别日志的宏。
+// 用于记录错误级别日志的宏
 // 使用方法: LOG_ERROR("%s %d", arg1, arg2)
 #define LOG_ERROR(logmsgFormat, ...)                                           \
   do {                                                                         \
@@ -24,7 +24,7 @@
     logger.log(buf);                                                           \
   } while (0)
 
-// 用于记录严重错误级别日志并退出程序的宏。
+// 用于记录严重错误级别日志并退出程序的宏
 // 使用方法: LOG_FATAL("%s %d", arg1, arg2)
 #define LOG_FATAL(logmsgFormat, ...)                                           \
   do {                                                                         \
@@ -36,7 +36,7 @@
     exit(-1);                                                                  \
   } while (0)
 
-// 用于记录调试级别日志的宏，仅在定义了MUDEBUG时有效。
+// 用于记录调试级别日志的宏，仅在定义了 MUDEBUG 时有效
 // 使用方法: LOG_DEBUG("%s %d", arg1, arg2)
 #ifdef MUDEBUG
 #define LOG_DEBUG(logmsgFormat, ...)                                           \
