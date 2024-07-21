@@ -68,4 +68,4 @@
 3. `poll()` 方法负责 ***Polls the I/O events.***
 4. `updateChannel()` 方法负责 ***Changes the interested I/O events.***
 5. `removeChannel()` 方法负责 ***Remove the channel, when it destructs.***
-6. **`ChannelMap` 负责保存 `Channel` 和 `fd` 的映射关系**
+6. **`ChannelMap` 负责保存 `Channel` 和 `fd` 的映射关系，此处双向哈希表的设计值得学习**
