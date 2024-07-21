@@ -4,7 +4,7 @@
 
 [Docker 开发环境](https://github.com/Corner430/Docker/tree/main/mymuduo)
 
-[开发日志](https://github.com/Corner430/mymuduo/blob/main/logs.txt)
+[开发日志](https://github.com/Corner430/mymuduo/blob/main/logs.md)
 
 ## 1 先修知识
 

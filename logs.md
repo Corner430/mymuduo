@@ -1,0 +1,5 @@
+开发日志
+
+1. CMakeLists.txt 和 .gitignore 文件的编写
+2. noncopyable 类的编写，禁止拷贝构造和赋值构造，**作为基类**
+3. Logger （日志）类的编写，**单例模式**
