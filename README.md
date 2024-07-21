@@ -4,6 +4,8 @@
 
 [Docker 开发环境](https://github.com/Corner430/Docker/tree/main/mymuduo)
 
+[开发日志](https://github.com/Corner430/mymuduo/blob/main/logs.txt)
+
 ## 1 先修知识
 
 - muduo 网络库的使用 参见[chatserver-muduo](https://github.com/Corner430/chatserver/tree/main?tab=readme-ov-file#5-muduo-网络库)
