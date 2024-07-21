@@ -45,14 +45,14 @@
         3. 负责调用具体事件的回调操作(因为它可以获知 fd 最终发生的具体事件 revents)
     - Poller 是对 epoll 的封装类
 3. 如果只是使用指针类型，使用 class 的前置声明
-4. `weak_ptr` 通过 `.lock()` 方法**提权来确定对象是否还存在**
+4. `weak_ptr` 通过 `.lock()` 方法<font color="#dd00dd">提权来确定对象是否还存在</font><br />
 5. 左值之间用 `std::move` 转换为右值引用（移动语义）
 6. 1 个 EventLoop 对应 1 个 Poller 和 ChannelList，1 个 Poller 对应多个 Channel
 7. `update()` 方法
     1. 当改变 channel 所表示 fd 的 events 后
     2. `update()` 方法负责在 Poller 里更改 fd 相应的事件
     3. 会调用 `epoll_ctl()` 方法
-    4. **跨类如何调用的问题**
+    4. <font color="#dd00dd">跨类如何调用的问题</font><br />
         1. channel 无法更改 Poller 中的 fd，但是二者都属于 EventLoop 的管理范围
         2. EventLoop 含有 Poller 和 ChannelList
         3. 通过 channel 所属的 EventLoop，调用 Poller 的相应方法，注册 fd 的 events
@@ -68,4 +68,11 @@
 3. `poll()` 方法负责 ***Polls the I/O events.***
 4. `updateChannel()` 方法负责 ***Changes the interested I/O events.***
 5. `removeChannel()` 方法负责 ***Remove the channel, when it destructs.***
-6. **`ChannelMap` 负责保存 `Channel` 和 `fd` 的映射关系，此处双向哈希表的设计值得学习**
+6. **`ChannelMap` 负责保存 `Channel` 和 `fd` 的映射关系**，<font color="#dd00dd">此处双向哈希表的设计值得学习</font><br />
+7. `static Poller* newDefaultPoller(EventLoop* loop)` 方法的实现需要单独放在一个文件中，**否则就要包含 `Poller.h` 和 `EventLoop.h` 两个头文件（基类包含派生类），造成循环引用**。<font color="#dd00dd">这是一种通用的解决循环引用的方法，值得学习</font><br />
+
+### 8 DefaultPoller 类
+
+1. 给出 `EpollPoller` 的空实现，放弃 `PollPoller` 的实现
+2. 根据环境变量 `MUDUO_USE_POLL` 来选择 `nullptr` 或 `EpollPoller`
+3. `EpollPoller` 即 epoll 的封装类，是 muduo 默认的 I/O 复用类
