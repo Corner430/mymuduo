@@ -4,7 +4,7 @@ project(mymuduo)
 # 设置动态库的路径
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-# 设置调试信息以及启动 C++11 语言标准
+# 设置调试信息以及启动 C++11 语言标准，fPIC 表示生成位置无关的代码
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11 -fPIC")
 
 # 定义参与编译的源代码文件 
