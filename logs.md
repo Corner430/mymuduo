@@ -19,9 +19,5 @@
 
 #### 4 Timestamp 类的编写
 
-**时间戳**
-
-1. `std::chrono::system_clock::now()` 获取当前时间
-2. `std::chrono::system_clock::to_time_t()` 将时间转换为 `time_t`
-3. `std::chrono::system_clock::from_time_t()` 将 `time_t` 转换为时间
-4. `std::chrono::duration_cast<std::chrono::milliseconds>()` 将时间转换为毫秒
+1. `explicit` 关键字禁止隐式转换
+2. 自 Unix 纪元以来的微秒数转换为当前时间
