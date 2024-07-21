@@ -4,6 +4,7 @@
 
 // 用于记录信息级别日志的宏
 // 使用方法: LOG_INFO("%s %d", arg1, arg2)
+// 可变参，logmsgFormat 为格式化字符串，##__VA_ARGS__ 为可变参数
 #define LOG_INFO(logmsgFormat, ...)                                            \
   do {                                                                         \
     Logger &logger = Logger::instance();                                       \
