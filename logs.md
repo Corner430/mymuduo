@@ -44,11 +44,7 @@
         2. 绑定了 Poller 返回的具体事件。
         3. 负责调用具体事件的回调操作(因为它可以获知 fd 最终发生的具体事件 revents)
     - Poller 是对 epoll 的封装类
-3. class 的前置声明
-    - 减少编译依赖
-    - 避免循环依赖
-    - 提高编译速度
-    - 减少不必要的耦合
+3. 如果只是使用指针类型，使用 class 的前置声明
 4. `weak_ptr` 通过 `.lock()` 方法**提权来确定对象是否还存在**
 5. 左值之间用 `std::move` 转换为右值引用（移动语义）
 6. 1 个 EventLoop 对应 1 个 Poller 和 ChannelList，1 个 Poller 对应多个 Channel
@@ -64,3 +60,12 @@
     1. 在 TcpConnection 中，当 TcpConnection 被销毁时，需要将 Channel 从 Poller 中移除
     2. 通过 tie() 方法，将 TcpConnection 和 Channel 绑定在一起
     3. 当 TcpConnection 被销毁时，Channel 也会被销毁
+
+### 7 Poller 抽象类
+
+1. *Base class for IO Multiplexing*
+2. 给所有 IO 复用保留统一的接口，*Must be called in the loop thread.*
+3. `poll()` 方法负责 ***Polls the I/O events.***
+4. `updateChannel()` 方法负责 ***Changes the interested I/O events.***
+5. `removeChannel()` 方法负责 ***Remove the channel, when it destructs.***
+6. **`ChannelMap` 负责保存 `Channel` 和 `fd` 的映射关系**
