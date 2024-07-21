@@ -1,5 +1,7 @@
 # 重构 [muduo 网络库](https://github.com/chenshuo/muduo)
 
+使用 C++11 重构，摆脱 `boost` 依赖
+
 ## 1 先修知识
 
 - muduo 网络库的使用 参见[chatserver-muduo](https://github.com/Corner430/chatserver/tree/main?tab=readme-ov-file#5-muduo-网络库)
