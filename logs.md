@@ -36,4 +36,19 @@
 #### 6 Channel 类
 
 1. 创建 Channel 文件，创建 TcpServer, EventLoop 空实现文件
-2. **明确 TcpServer 是对外的服务器编程使用的类，EventLoop 是事件循环类，Channel 是 fd 和事件的封装类，Poller 是对 epoll 的封装类**
+2. **明确 TcpServer, EventLoop, Poller, Channel 的关系和作用**
+    - TcpServer 是对外的服务器编程使用的类
+    - EventLoop 是事件循环类
+    - Channel
+        1. 封装了 `sockfd` 和 `sockfd` 上感兴趣以及发生的事件，例如 `EPOLLIN`, `EPOLLOUT`等
+        2. 绑定了 Poller 返回的具体事件。
+        3. 负责调用具体事件的回调操作(因为它可以获知 fd 最终发生的具体事件 revents)
+    - Poller 是对 epoll 的封装类
+3. class 的前置声明
+    - 减少编译依赖
+    - 避免循环依赖
+    - 提高编译速度
+    - 减少不必要的耦合
+4. `weak_ptr` 用来**跨线程提权来确定对象是否还存在**
+5. 左值之间用 `std::move` 转换为右值引用（移动语义）
+6. `update()` 方法会调用 Poller 的 `updateChannel()` 方法，将自己加入到 Poller 中，然后 Poller 会调用 `epoll_ctl()` 方法，将自己加入到 epoll 中
