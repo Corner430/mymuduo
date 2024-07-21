@@ -1,7 +1,7 @@
 # Ignore built files
 /build/
 /bin/
-/lib/
+# /lib/
 
 # Ignore CMake generated files
 CMakeFiles/
@@ -13,7 +13,7 @@ CMakeLists.txt.user
 # Ignore compiled binaries and executables
 *.o
 *.a
-*.so
+# *.so
 *.dll
 *.exe
 
