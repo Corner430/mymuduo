@@ -21,7 +21,7 @@ public:
   Channel(EventLoop *loop, int fd);
   ~Channel();
 
-  // fd 得到 poller 通知以后，调用相应的回调处理事件
+  // fd 得到 Poller 通知以后，通过 handleEventWithGuard() 方法调用相应的回调处理事件
   void handleEvent(Timestamp receiveTime);
 
   // 设置回调函数对象
@@ -73,12 +73,19 @@ public:
   void remove();
 
 private:
-
-  /* 调用 Poller 的 `updateChannel()` 方法，将自己加入到 Poller 中，然后 Poller
-   * 会调用 `epoll_ctl()` 方法，将自己加入到 epoll 中
+  /*
+   * 1. 当改变 channel 所表示 fd 的 events 后
+   * 2. update() 方法负责在 Poller 里更改 fd 相应的事件
+   * 3. 会调用 epoll_ctl() 方法
+   * 4. 跨类如何调用的问题
+   *    1. channel 无法更改 Poller 中的 fd，但是二者都属于 EventLoop 的管理范围
+   *    2. EventLoop 含有 Poller 和 ChannelList
+   *    3. 通过 channel 所属的 EventLoop，调用 Poller 的相应方法，注册 fd 的 events
    */
   void update();
 
+  // 根据 Poller 通知的 channel 发生的具体事件，由 channel 负责调用具体的回调操作
+  // 接收一个时间戳参数，表示事件发生的时间
   void handleEventWithGuard(Timestamp receiveTime);
 
   static const int kNoneEvent;

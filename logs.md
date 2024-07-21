@@ -1,13 +1,13 @@
 # 开发日志
 
-#### 1 CMakeLists.txt 和 .gitignore 文件
+### 1 CMakeLists.txt 和 .gitignore 文件
 
-#### 2 noncopyable 类
+### 2 noncopyable 类
 
 1. 禁止拷贝构造和赋值构造
 2. 作为基类
 
-#### 3 Logger （日志）类
+### 3 Logger （日志）类
 
 **单例模式**
 
@@ -18,12 +18,12 @@
 2. 可变参宏的编写
 3. 提供给外部的接口：`LOG_INFO`, `LOG_ERROR`, `LOG_FATAL`, `LOG_DEBUG`
 
-#### 4 Timestamp 类
+### 4 Timestamp 类
 
 1. `explicit` 关键字禁止隐式转换
 2. 自 Unix 纪元以来的微秒数转换为当前时间
 
-#### 5 InetAddress 类
+### 5 InetAddress 类
 
 1. `sockaddr_in`,`bzero` 的使用
 2. `htonl`, `ntohl`, `htons`, `ntohs` 函数的使用
@@ -33,7 +33,7 @@
     4. `ntohs`: network to host short, 将网络字节序转换为主机字节序
 3. 不再解析 ipv6 地址
 
-#### 6 Channel 类
+### 6 Channel 类
 
 1. 创建 Channel 文件，创建 TcpServer, EventLoop 空实现文件
 2. **明确 TcpServer, EventLoop, Poller, Channel 的关系和作用**
@@ -49,6 +49,18 @@
     - 避免循环依赖
     - 提高编译速度
     - 减少不必要的耦合
-4. `weak_ptr` 用来**跨线程提权来确定对象是否还存在**
+4. `weak_ptr` 通过 `.lock()` 方法**提权来确定对象是否还存在**
 5. 左值之间用 `std::move` 转换为右值引用（移动语义）
-6. `update()` 方法会调用 Poller 的 `updateChannel()` 方法，将自己加入到 Poller 中，然后 Poller 会调用 `epoll_ctl()` 方法，将自己加入到 epoll 中
+6. 1 个 EventLoop 对应 1 个 Poller 和 ChannelList，1 个 Poller 对应多个 Channel
+7. `update()` 方法
+    1. 当改变 channel 所表示 fd 的 events 后
+    2. `update()` 方法负责在 Poller 里更改 fd 相应的事件
+    3. 会调用 `epoll_ctl()` 方法
+    4. **跨类如何调用的问题**
+        1. channel 无法更改 Poller 中的 fd，但是二者都属于 EventLoop 的管理范围
+        2. EventLoop 含有 Poller 和 ChannelList
+        3. 通过 channel 所属的 EventLoop，调用 Poller 的相应方法，注册 fd 的 events
+8. `tie()` 方法的调用时机和作用
+    1. 在 TcpConnection 中，当 TcpConnection 被销毁时，需要将 Channel 从 Poller 中移除
+    2. 通过 tie() 方法，将 TcpConnection 和 Channel 绑定在一起
+    3. 当 TcpConnection 被销毁时，Channel 也会被销毁
