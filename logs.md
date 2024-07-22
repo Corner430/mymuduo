@@ -139,5 +139,13 @@
 
 EventLoop 线程相关的类：Thread，EventLoopThread，EventLoopThreadPool
 
+Thread 类封装了一个新线程的相关信息，包括线程 ID，线程状态，线程函数等
+
 1. **为避免直接使用 std::thread 导致线程立刻启动，使用智能指针来管理线程**
 2. 使用**信号量**来确保主线程等待新线程完成特定的初始化步骤。**这样可以避免在新线程还没有完全初始化之前，主线程就继续执行后续代码，导致未定义的行为或数据竞争问题**，详见 `man 7 sem_overview`
+
+### 13 EventLoopThread 类
+
+**将 loop 和 thread 封装在一起，确保了 one loop per thread ！！！**
+
+1. 在 thread 中创建一个 EventLoop 对象，通过条件变量将值传递给主线程
