@@ -31,7 +31,7 @@
     2. `htons`: host to network short, 将主机字节序转换为网络字节序
     3. `ntohl`: network to host long, 将网络字节序转换为主机字节序
     4. `ntohs`: network to host short, 将网络字节序转换为主机字节序
-3. 不再解析 ipv6 地址
+3. 不再支持解析 ipv6 地址
 
 ### 6 Channel 类
 
@@ -100,3 +100,13 @@
 7. `&*vec.begin()` **可以获得 vector 底层数据的首地址**
 8. 四大类型转换之 [`static_cast`](https://github.com/Corner430/study-notes/blob/main/cpp/cpp中级笔记.md#211-c-四种类型转换)
 9. `errno` 是全局变量，保存了上一个系统调用的错误码，会被 `epoll_wait()` 修改，所以需要保存
+
+### 10 CurrentThread 类
+
+由于 *one loop per thread* 的设计，所以需要一个类来**获取当前线程的线程 ID**
+
+> 如果每次都调用 syscall(SYS_gettid) 来获取当前线程的 tid，**会由于内核/用户态的切换而影响性能**，因此可以使用线程局部变量来缓存当前线程的 tid，这样就可以减少调用 syscall(SYS_gettid) 的次数。
+
+1. `__thread` 关键字，**线程局部存储**，每个线程都有自己的变量，互不干扰
+2. `extern` 关键字，**声明**一个变量，不分配内存，**在其他文件中定义**
+3. [`__builtin_expect`](http://blog.man7.org/2012/10/how-much-do-builtinexpect-likely-and.html) 是 GCC 的内建函数，**用来告诉编译器分支预测，提高程序性能**。类似的还有 C++20 的 `[[likely]]` 和 `[[unlikely]]` 关键字，其实现也是通过 GCC 的 `__builtin_expect` 实现的
