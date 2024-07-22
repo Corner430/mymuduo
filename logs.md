@@ -149,3 +149,9 @@ Thread 类封装了一个新线程的相关信息，包括线程 ID，线程状�
 **将 loop 和 thread 封装在一起，确保了 one loop per thread ！！！**
 
 1. 在 thread 中创建一个 EventLoop 对象，通过条件变量将值传递给主线程
+
+### 14 EventLoopThreadPool 类
+
+1. EventLoopThreadPool 是一个线程池，每个线程都有一个 EventLoop 对象
+2. 通过 round-robin 轮询的方式，将新连接分配给不同的 subLoop
+3. **`loops_` 保存了所有的 subLoop，`next_` 保存了下一个 subLoop 的索引**
