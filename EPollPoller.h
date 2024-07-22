@@ -1,5 +1,14 @@
-#include "Poller.h"
+#pragma once
 
+#include "Poller.h"
+#include "Timestamp.h"
+
+#include <sys/epoll.h>
+#include <vector>
+
+class Channel;
+
+// IO Multiplexing with epoll(4).
 class EPollPoller : public Poller {
 public:
   EPollPoller(EventLoop *loop);
@@ -11,4 +20,16 @@ public:
   void removeChannel(Channel *channel) override;
 
 private:
+  static const int kInitEventListSize = 16;
+
+  // 填写活跃的连接
+  void fillActiveChannels(int numEvents, ChannelList *activeChannels) const;
+
+  // 更新 channel 所关注的事件
+  void update(int operation, Channel *channel);
+
+  using EventList = std::vector<epoll_event>;
+
+  int epollfd_;
+  EventList events_;
 };

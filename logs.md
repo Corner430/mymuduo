@@ -76,3 +76,27 @@
 1. 给出 `EpollPoller` 的空实现，放弃 `PollPoller` 的实现
 2. 根据环境变量 `MUDUO_USE_POLL` 来选择 `nullptr` 或 `EpollPoller`
 3. `EpollPoller` 即 epoll 的封装类，是 muduo 默认的 I/O 复用类
+
+### 9 EpollPoller 类
+
+***EpollPoller is IO Multiplexing with epoll(4).***
+
+1. `override` 关键字显式地告诉编译器，这个函数是一个虚函数的重写（覆盖）
+2. epoll 的使用：`epoll_create()`, `epoll_ctl()`, `epoll_wait()`
+    1. 构造函数中创建 `epollfd_`，对应 `epoll_create()`
+    2. `updateChannel()` 通过封装的 `update()` 方法 调用 `epoll_ctl()`，注册 fd 的 events
+    3. `poll()` 方法中调用 `epoll_wait()`，等待事件发生
+    4. 析构函数中关闭 `epollfd_`，对应 `close()`
+3. `events_` 数组保存 `epoll_wait()` 返回的 `epoll_event` 结构体，初始大小为 `kInitEventListSize`，**只有扩容操作，没有缩容操作**
+4. `update()` 方法 是一个 `epoll_ctl()` 操作，同时让 `event.data.ptr` 指向对应的 channel，**要深切了解 `struct epoll_event`**
+5. `updateChannel()` 方法
+    1. 更改 channel 的状态(`index`)
+    2. **将 channel 添加到 `channels_` 中，也就是当前的 EPollPoller 对象中**
+    2. 调用封装的 `update()` 方法，添加、修改、删除 channel 所关注的事件
+6. `poll()` 方法
+    1. 调用 `epoll_wait()`，等待事件发生
+    2. 将 `epoll_wait()` 返回的事件保存到 `events_` 中
+    3. 遍历 `events_`，调用封装的 `fillActiveChannels()` 方法，将发生事件的 channel 添加到 `activeChannels` 中，并设定 channel 的 `revents`。**如此一来，EventLoop 就可以通过 activeChannels 获取到发生事件的 Channel**
+7. `&*vec.begin()` **可以获得 vector 底层数据的首地址**
+8. 四大类型转换之 [`static_cast`](https://github.com/Corner430/study-notes/blob/main/cpp/cpp中级笔记.md#211-c-四种类型转换)
+9. `errno` 是全局变量，保存了上一个系统调用的错误码，会被 `epoll_wait()` 修改，所以需要保存
