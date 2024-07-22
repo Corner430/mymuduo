@@ -110,3 +110,18 @@
 1. `__thread` 关键字，**线程局部存储**，每个线程都有自己的变量，互不干扰
 2. `extern` 关键字，**声明**一个变量，不分配内存，**在其他文件中定义**
 3. [`__builtin_expect`](http://blog.man7.org/2012/10/how-much-do-builtinexpect-likely-and.html) 是 GCC 的内建函数，**用来告诉编译器分支预测，提高程序性能**。类似的还有 C++20 的 `[[likely]]` 和 `[[unlikely]]` 关键字，其实现也是通过 GCC 的 `__builtin_expect` 实现的
+
+### 11 EventLoop 类
+
+*EventLoop : Reactor, at most one per thread. This is an interface class, so don't expose too much details.*
+
+1. EventLoop 是一个事件循环类，包含两个大模块：
+    - ChannelList：保存了所有的 Channel
+        1. 封装了 sockfd 和 sockfd 上感兴趣以及发生的事件
+        2. 绑定了 Poller 返回的具体事件
+        3. 负责调用具体事件的回调操作(因为它可以获知 fd 最终发生的具体事件revents)
+    - Poller : epoll 的抽象类，含有 ChannelMap，保存了 Channel 和 fd 的映射关系
+    - **EventLoop 中的 ChannelList 数量大于等于 Poller 中的 Channel 数量**
+2. [`atomic`](https://github.com/Corner430/study-notes/blob/main/cpp/cpp高级笔记.md#46-基于-cas-操作的-atomic-原子类型)
+3. **通过 [`eventfd`](https://man7.org/linux/man-pages/man2/eventfd.2.html)(代码中是 `wakeupFd_`) 来唤醒 `epoll_wait()`，实现跨线程唤醒 subReactor(subLoop)**。[`socketpair`](https://man7.org/linux/man-pages/man2/socketpair.2.html) 也可以实现，但是 `eventfd` 更加高效
+4. [`unique_ptr`](https://github.com/Corner430/study-notes/blob/main/cpp/cpp高级笔记.md#233-unique_ptr)
