@@ -66,7 +66,7 @@ public:
   bool isInLoopThread() const { return threadId_ == CurrentThread::tid(); }
 
 private:
-  void handleRead();        // waked up
+  void handleRead();        // waked up 之后的处理函数(回调)
   void doPendingFunctors(); // 执行所有待处理的回调函数
 
   using ChannelList = std::vector<Channel *>; // 定义 channel 列表的类型别名
@@ -88,8 +88,8 @@ private:
   std::unique_ptr<Channel> wakeupChannel_;
 
   // scratch variables
-  ChannelList activeChannels_; // 当前活跃的 channel 列表
-  // Channel* currentActiveChannel_;
+  ChannelList activeChannels_; // 活跃的 channel 列表
+  // Channel *currentActiveChannel_; // 当前正在处理的 channel
 
   std::atomic_bool
       callingPendingFunctors_; // 标识当前 loop 是否有需要执行的回调

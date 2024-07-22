@@ -124,4 +124,13 @@
     - **EventLoop 中的 ChannelList 数量大于等于 Poller 中的 Channel 数量**
 2. [`atomic`](https://github.com/Corner430/study-notes/blob/main/cpp/cpp高级笔记.md#46-基于-cas-操作的-atomic-原子类型)
 3. **通过 [`eventfd`](https://man7.org/linux/man-pages/man2/eventfd.2.html)(代码中是 `wakeupFd_`) 来唤醒 `epoll_wait()`，实现跨线程唤醒 subReactor(subLoop)**。[`socketpair`](https://man7.org/linux/man-pages/man2/socketpair.2.html) 也可以实现，但是 `eventfd` 更加高效
-4. [`unique_ptr`](https://github.com/Corner430/study-notes/blob/main/cpp/cpp高级笔记.md#233-unique_ptr)
+4. [`unique_ptr`](https://github.com/Corner430/study-notes/blob/main/cpp/cpp高级笔记.md#233-unique_ptr) 用来保证只有一个 Poller 对象和 wakeupChannel_ 对象
+5. [`unique_lock`](https://github.com/Corner430/study-notes/blob/main/cpp/cpp高级笔记.md#45-lock_guard-和-unique_lock)
+6. [`emplace_back`](https://github.com/Corner430/study-notes/blob/main/cpp/cpp高级笔记.md#6-c11-容器-emplace-方法原理剖析)
+7. **`doPendingFunctors()` 中通过 `swap` 减小临界区的长度**
+8. `callingPendingFunctors_` 用来标记当前是否有任务正在执行，用在 `queueInLoop()` 中
+    1. 如果调用 `queueInLoop()` 和 EventLoop 不在同一个线程，或者 `callingPendingFunctors_` 为 `true` 时（此时正在执行 `doPendingFunctors()`，即正在执行回调），则唤醒 loop 所在的线程
+    2. 如果调用 `queueInLoop()` 和 EventLoop 在同一个线程，但是 `callingPendingFunctors_` 为 `false` 时，则说明：此时尚未执行到 `doPendingFunctors()`。**不必唤醒，这个优雅的设计可以减少对 `eventfd` 的 IO 读写**
+9. `Poller` 的 `poll()` 方法监听两种 `fd`：`wakeupFd_` 和 `epollfd_`
+10. **跨线程调用 `quit()` 方法，通过 `wakeup()` 方法唤醒 `subLoop`，实现跨线程唤醒**
+11. EventLoop 跨线程通信也可以使用 **生产者-消费者** 模型，mainLoop 作为生产者，subLoop 作为消费者。**muduo 是通过 `wakeupFd_` 来直接通信，非常巧妙**

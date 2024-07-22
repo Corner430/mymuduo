@@ -33,11 +33,11 @@ void Channel::update() {
    * 2. EventLoop 含有 Poller 和 ChannelList
    * 3. 通过 channel 所属的 EventLoop，调用 Poller 的相应方法，注册 fd 的 events
    */
-  // loop_->updateChannel(this); TODO
+  loop_->updateChannel(this);
 }
 
-// 在 channel 所属的 EventLoop 中， 把当前的 channel 删除掉
-// void Channel::remove() { loop_->removeChannel(this); } TODO
+// 在 channel 所属的 EventLoop（Poller） 中， 把当前的 channel 删除掉
+void Channel::remove() { loop_->removeChannel(this); }
 
 // fd 得到 Poller 通知以后，通过 handleEventWithGuard() 方法调用相应的回调处理事件
 void Channel::handleEvent(Timestamp receiveTime) {
