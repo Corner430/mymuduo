@@ -134,3 +134,10 @@
 9. `Poller` 的 `poll()` 方法监听两种 `fd`：`wakeupFd_` 和 `epollfd_`
 10. **跨线程调用 `quit()` 方法，通过 `wakeup()` 方法唤醒 `subLoop`，实现跨线程唤醒**
 11. EventLoop 跨线程通信也可以使用 **生产者-消费者** 模型，mainLoop 作为生产者，subLoop 作为消费者。**muduo 是通过 `wakeupFd_` 来直接通信，非常巧妙**
+
+### 12 Thread 类
+
+EventLoop 线程相关的类：Thread，EventLoopThread，EventLoopThreadPool
+
+1. **为避免直接使用 std::thread 导致线程立刻启动，使用智能指针来管理线程**
+2. 使用**信号量**来确保主线程等待新线程完成特定的初始化步骤。**这样可以避免在新线程还没有完全初始化之前，主线程就继续执行后续代码，导致未定义的行为或数据竞争问题**，详见 `man 7 sem_overview`
