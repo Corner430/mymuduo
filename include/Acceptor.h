@@ -17,7 +17,7 @@ public:
   ~Acceptor();
 
   void setNewConnectionCallback(const NewConnectionCallback &cb) {
-    newConnectionCallback_ = cb;
+    newConnectionCallback_ = cb; // TcpServer::newConnection
   }
 
   bool listenning() const { return listenning_; }
@@ -31,7 +31,8 @@ private:
 
   EventLoop *loop_; // Acceptor 用的是用户定义的 baseLoop(即 mainLoop)
   Socket acceptSocket_;
-  Channel acceptChannel_;                       // 要注册到 Poller 中
-  NewConnectionCallback newConnectionCallback_; // 负责将新连接分发给 subLoop
+  Channel acceptChannel_; // 要注册到 Poller 中
+  // 负责将新连接分发给 subLoop，会被 TcpServer 的 newConnection() 方法调用
+  NewConnectionCallback newConnectionCallback_;
   bool listenning_;
 };
