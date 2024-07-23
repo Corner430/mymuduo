@@ -156,3 +156,11 @@ Thread 类封装了一个新线程的相关信息，包括线程 ID，线程状�
 2. 通过 round-robin 轮询的方式，将新连接分配给不同的 subLoop
 3. **`loops_` 保存了所有的 subLoop，`next_` 保存了下一个 subLoop 的索引**
 4. 不需要对 `loops_` 进行析构，因为其指向的对象是栈上的对象，会随着线程的结束而自动销毁
+
+### 15 Socket 类
+
+Socket 类作为 Accepter 类的成员，必须要先进行输出
+
+1. **Socket 类封装了 socket 的创建、绑定、监听、接受连接等操作**
+2. 结合 InetAddress 类，实现了对对端地址的封装
+3. `shutdownWrite()` 方法用来关闭写端，**[半关闭](https://github.com/Corner430/TCP-IP-NetworkNote?tab=readme-ov-file#713-针对优雅断开的-shutdown-函数)**
