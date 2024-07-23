@@ -161,6 +161,17 @@ Thread 类封装了一个新线程的相关信息，包括线程 ID，线程状�
 
 Socket 类作为 Accepter 类的成员，必须要先进行输出
 
-1. **Socket 类封装了 socket 的创建、绑定、监听、接受连接等操作**
-2. 结合 InetAddress 类，实现了对对端地址的封装
+1. **Socket 类封装了 socket 的 bind, listen, accept 等操作**
+2. 结合 InetAddress 类，保存对端地址和端口
 3. `shutdownWrite()` 方法用来关闭写端，**[半关闭](https://github.com/Corner430/TCP-IP-NetworkNote?tab=readme-ov-file#713-针对优雅断开的-shutdown-函数)**
+
+### 16 Accepter 类
+
+*Acceptor of incoming TCP connections.*
+
+1. Acceptor 类负责监听新连接，运行在 mainLoop 中
+2. `newConnectionCallback_` 负责将新连接分发给 subLoop
+3. `listen()` 方法负责监听新连接，即调用 `::listen()` 函数，**并将监听套接字的 Channel 注册到 Poller 中**，由 TcpServer 的 `start()` 方法调用
+4. `handleRead()` 方法负责处理新连接，通过 `newConnectionCallback_` 回调函数将新连接分发给 subLoop
+
+> **一言以蔽之，封装了 `acceptChannel`, `acceptSocket`, `newConnectionCallback_`，并且将 `acceptChannel` 注册到 `mainLoop` 中，监听新连接。通过 `newConnectionCallback_` 回调函数将新连接轮询分发给 `subLoop`**
