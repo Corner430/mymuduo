@@ -155,3 +155,4 @@ Thread 类封装了一个新线程的相关信息，包括线程 ID，线程状�
 1. EventLoopThreadPool 是一个线程池，每个线程都有一个 EventLoop 对象
 2. 通过 round-robin 轮询的方式，将新连接分配给不同的 subLoop
 3. **`loops_` 保存了所有的 subLoop，`next_` 保存了下一个 subLoop 的索引**
+4. 不需要对 `loops_` 进行析构，因为其指向的对象是栈上的对象，会随着线程的结束而自动销毁
