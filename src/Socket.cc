@@ -2,7 +2,7 @@
 #include "InetAddress.h"
 #include "Logger.h"
 
-#include <netinet/tcp.h>
+#include <netinet/tcp.h> // TCP_NODELAY
 #include <strings.h>
 #include <sys/socket.h>
 #include <sys/types.h>
