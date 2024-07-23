@@ -170,7 +170,7 @@ Socket 类作为 Accepter 类的成员，必须要先进行输出
 *Acceptor of incoming TCP connections.*
 
 1. Acceptor 类负责监听新连接，运行在 mainLoop 中
-2. `newConnectionCallback_` 负责将新连接分发给 subLoop
+2. `newConnectionCallback_` 负责将新连接分发给 subLoop，**会被 TcpServer 的 `newConnection()` 方法调用**
 3. `listen()` 方法负责监听新连接，即调用 `::listen()` 函数，**并将监听套接字的 Channel 注册到 Poller 中**，由 TcpServer 的 `start()` 方法调用
 4. `handleRead()` 方法负责处理新连接，通过 `newConnectionCallback_` 回调函数将新连接分发给 subLoop
 
@@ -181,3 +181,9 @@ Socket 类作为 Accepter 类的成员，必须要先进行输出
 *All client visible callbacks go here.*
 
 ### 18 TcpServer 类
+
+1. TcpServer 是对外的服务器编程使用的类
+2. `start()` 方法负责启动服务器，即调用 `accepter` 的 `listen()` 方法，监听新连接
+3. `newConnection()` 方法负责处理新连接，即调用 `accepter` 的 `handleRead()` 方法，处理新连接
+4. `removeConnection()` 方法负责移除连接，即调用 `connectionMap_` 的 `erase()` 方法，移除连接
+5. `removeConnectionInLoop()` 方法负责在 loop 中移除连接，即调用 `loop` 的 `queueInLoop()` 方法，将连接移除
