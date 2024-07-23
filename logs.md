@@ -175,3 +175,9 @@ Socket 类作为 Accepter 类的成员，必须要先进行输出
 4. `handleRead()` 方法负责处理新连接，通过 `newConnectionCallback_` 回调函数将新连接分发给 subLoop
 
 > **一言以蔽之，封装了 `acceptChannel`, `acceptSocket`, `newConnectionCallback_`，并且将 `acceptChannel` 注册到 `mainLoop` 中，监听新连接。通过 `newConnectionCallback_` 回调函数将新连接轮询分发给 `subLoop`**
+
+### 17 Callback 类
+
+*All client visible callbacks go here.*
+
+### 18 TcpServer 类
