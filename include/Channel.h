@@ -31,6 +31,7 @@ public:
   void setErrorCallback(EventCallback cb) { errorCallback_ = std::move(cb); }
 
   // 防止当 channel 被手动 remove 掉，channel 还在执行回调操作
+  // 通过 tie() 方法，将 TcpConnection 和 channel 绑定
   void tie(const std::shared_ptr<void> &);
 
   int fd() const { return fd_; }
@@ -109,7 +110,7 @@ private:
    * weak_ptr 可以跨线程提权来确定对象是否还存在
    */
   std::weak_ptr<void> tie_;
-  bool tied_;
+  bool tied_; // 标识是否已经和 TcpConnection 绑定
 
   /* channel 可以获知 fd 最终发生的具体事件 revents
    * 所以它负责调用具体事件的回调操作
