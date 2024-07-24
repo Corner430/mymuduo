@@ -180,7 +180,41 @@ Socket 类作为 Accepter 类的成员，必须要先进行输出
 
 *All client visible callbacks go here.*
 
-### 18 TcpServer 类
+`HighWaterMarkCallback` ： **发送数据时，应用写的快，而内核发送数据慢，需要把待发送数据写入缓冲区，当缓冲区的数据超过一定的水位时，就会调用这个回调函数**，用在 `TcpConnection` 类中
+
+### 18 buffer 类
+
+buffer 类是一个缓冲区类，用来保存数据
+
+```shell
+* +-------------------+------------------+------------------+
+* | prependable bytes |  readable bytes  |  writable bytes  |
+* |                   |     (CONTENT)    |                  |
+* +-------------------+------------------+------------------+
+* |                   |                  |                  |
+* 0      <=      readerIndex   <=   writerIndex    <=     size
+```
+
+1. 使用 `std::vector<char>` 来保存数据，`readerIndex` 和 `writerIndex` 来标记读写位置，**巧妙的使用 `prependableBytes` 来减少数据的拷贝，仅 `writable bytes` 不足时需要拷贝数据**
+2. 使用 `readv` 和 `writev` 系统调用，可以向内核传递多个缓冲区，减少系统调用次数
+3. **从 `fd` 中读取数据到 `writeIndex` 位置，向 `fd` 中写入数据从 `readIndex` 位置开始**
+
+### 19 TcpConnection 类
+
+Tcpconnection 是对一条已建立连接的封装，包括 `Channel`, `Socket`(已连接), `Buffer`, `EventLoop`(subReactor), `peerAddress`, `localAddress` 等
+
+> **Tcpconnection 和 Channel 一一对应**
+
+顺序：TcpServer => Acceptor => TcpConnection => Channel => Poller
+
+1. `static` 用来保证在不同的文件中同样函数名不会冲突
+2. [`enable_shared_from_this`](https://zh.cppreference.com/w/cpp/memory/enable_shared_from_this) 可以在类中获取 `shared_ptr`
+3. TcpConnection 所属的 EventLoop 是 subLoop, 即 subReactor
+4. **在第一次调用 `send()` 方法时，Channel 还没有注册 `EPOLLOUT` 事件，仅当没有把数据发送完时，才注册 `EPOLLOUT` 事件**
+5. 在 mainReactor 中建立一条新连接时，会调用 `TcpConnection::connectEstablished()` 方法，将相应的 Channel 绑定（`tie()`）到 TcpConnection 上，同时注册 `EPOLLIN` 事件，之后执行 `ConnectionCallback` 回调函数
+6. **`handle` 系列方法中会执行用户传入的回调函数，这一系列 `handle` 方法会和 `Channel` 中的回调绑定在一起**
+
+### 20 TcpServer 类
 
 1. TcpServer 是对外的服务器编程使用的类
 2. `start()` 方法负责启动服务器，即调用 `accepter` 的 `listen()` 方法，监听新连接
