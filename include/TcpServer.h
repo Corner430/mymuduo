@@ -1,12 +1,12 @@
 #pragma once
 
 #include "Acceptor.h"
-// #include "Buffer.h" TODO
+#include "Buffer.h"
 #include "Callbacks.h"
 #include "EventLoop.h"
 #include "EventLoopThreadPool.h"
 #include "InetAddress.h"
-// #include "TcpConnection.h" TODO
+#include "TcpConnection.h"
 #include "noncopyable.h"
 
 #include <atomic>
@@ -65,7 +65,7 @@ public:
    * - 1 means all I/O in another thread.
    * - N means a thread pool with N threads, new connections
    *   are assigned on a round-robin basis.
-   * 设置底层subloop的个数 */
+   * 设置底层 subloop 的个数 */
   void setThreadNum(int numThreads);
 
   /* Starts the server if it's not listening.
@@ -77,15 +77,12 @@ public:
 
 private:
   /* Not thread safe, but in loop */
-  // 处理一个新的连接，传入 socket 文件描述符和对端地址
   void newConnection(int sockfd, const InetAddress &peerAddr);
 
   /* Thread safe. */
-  // 移除一个连接
   void removeConnection(const TcpConnectionPtr &conn);
 
   /* Not thread safe, but in loop */
-  // 在 EventLoop 中移除一个连接
   void removeConnectionInLoop(const TcpConnectionPtr &conn);
 
   using ConnectionMap = std::unordered_map<std::string, TcpConnectionPtr>;
