@@ -216,8 +216,8 @@ Tcpconnection 是对一条已建立连接的封装，包括 `Channel`, `Socket`(
 
 ### 20 TcpServer 类
 
-1. TcpServer 是对外的服务器编程使用的类
+1. TcpServer 是对外的服务器编程使用的类，**是一个对于所有连接的管理类，包括 `Acceptor`, `EventLoop`, `Poller`, `ChannelList`, `TcpConnection`，起到了调动各个类的作用**
 2. `start()` 方法负责启动服务器，即调用 `accepter` 的 `listen()` 方法，监听新连接
 3. `newConnection()` 方法负责处理新连接，即调用 `accepter` 的 `handleRead()` 方法，处理新连接
-4. `removeConnection()` 方法负责移除连接，即调用 `connectionMap_` 的 `erase()` 方法，移除连接
-5. `removeConnectionInLoop()` 方法负责在 loop 中移除连接，即调用 `loop` 的 `queueInLoop()` 方法，将连接移除
+4. `unique_ptr` 的 `get()` 方法返回指向的原始指针
+5. `shared_ptr` 的 [`reset()` 方法](https://zh.cppreference.com/w/cpp/memory/shared_ptr/reset)
