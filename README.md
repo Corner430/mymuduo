@@ -1,10 +1,23 @@
 # 重构 [muduo 网络库](https://github.com/chenshuo/muduo)
 
+> 一言以蔽之，`muduo` 是一个基于 `Reactor` 模式的 C++ 网络库，可以是单线程单 Reactor，也可以是多线程多 Reactor。
+
 使用 C++11 重构，摆脱 `boost` 依赖
 
 [Docker 开发环境](https://github.com/Corner430/Docker/tree/main/mymuduo)
 
 [开发日志](https://github.com/Corner430/mymuduo/blob/main/logs.md)
+
+> 建议结合 commit 记录和开发日志阅读，**务必重视开发日志**
+
+设计技术栈：
+- I/O 多路复用、TCP/IP 网络编程、Reactor 模型
+- 智能指针、基于宏定义的日志系统、Buffer 缓冲区、四大类型转换
+- 多线程编程、通过 `eventfd` 进行线程间通信、信号量
+- 系统调用：`getenv`, `syscall(SYS_gettid)`，分支预测：`__builtin_expect`
+- 连接半关闭、`move` 语义、`explicit`、`__thread` 等
+
+> 详细技术设计参见[开发日志](https://github.com/Corner430/mymuduo/blob/main/logs.md)和源码注释
 
 ## 1 先修知识
 
@@ -18,171 +31,70 @@
 
 - Reactor 模型 参见[小林coding](https://xiaolincoding.com/os/8_network_system/reactor.html#reactor)
 
-## 2 优秀的网络服务器设计
+- [优秀的网络服务器设计](https://blog.corner430.eu.org/2024/07/24/优秀的网络服务器设计思路/#more)
 
-_libev_ 作者的观点：_one loop per thread is usually a good model_，这样多线程服务端编程的问题就转换为如何设计一个高效且易于使用的 `event loop`，然后每个线程 **_run_** 一个 `event loop` 就行了(当然线程间的同步、互斥少不了，还有其它的耗时事件需要起另外的线程来做)。
+## 2 源码剖析
 
-`event loop` 是 `non-blocking` 网络编程的核心，**`non-blocking` 几乎总是和 `IO-multiplexing` 一起使用**，原因有两点:
+### 2.1 `muduo` 网络库的核心模块
 
-- 没有人真的会用轮询 (`busy-pooling`) 来检查某个 `non-blocking IO` 操作是否完成，这样太浪费 CPU 资源了。
-- `IO-multiplex` 一般不能和 `blocking IO` 用在一起，因为 `blocking IO` 中 `read()/write()/accept()/connect()` 都有可能阻塞当前线程，这样线程就没办法处理其他 `socket` 上的 `IO` 事件了。
+- `TcpServer`：对于 Tcp 服务器的封装，负责调度管理整个 Reactor 模型的工作流程
+- `EventLoop`：事件循环，等价于 Reactor 模型中的 Reactor
+- `Acceptor`：运行在 `mainLoop` 中，负责监听新连接，并回调 `TcpServer::newConnection()` 方法将新连接分发到 `subReactor` 中
+- `Poller`：`epoll` 的抽象类，含有 `ChannelMap`，保存了 `Channel` 和 `fd` 的映射关系，每个 `EventLoop` 对象都有一个 `Poller` 对象，每个 `Poller` 对象都有一个 `ChannelMap` 对象。负责监听 `fd` 的可读写事件
 
-所以，当我们提到 `non-blocking` 的时候，实际上指的是 `non-blocking` + `IO-multiplexing`，单用其中任何一个都没有办法很好的实现功能。
+### 2.2 事件处理
 
-## 3 源码剖析
-
-### 3.1 `muduo` 网络库的核心模块
-
-所谓 `Reactor` 模式，是指有一个循环的过程，不断监听对应事件是否触发，事件触发时调用对应的 `callback` 进行处理。
-
-这里的事件在 `muduo` 中包括 `Socket` 可读写事件、定时器事件。
-
-- 负责事件循环的部分在 `muduo` 中被命名为 `EventLoop`
-- 负责监听事件是否触发的部分在 `muduo` 中被命名为 `Poller`。`muduo` 提供了 `epoll` 和 `poll` 两种来实现，默认是 `epoll` 实现。
-    - 通过环境变量 `MUDUO_USE_POLL` 来决定是否使用 `poll`:
-        ```cpp
-        // 静态成员函数，根据环境变量决定返回哪种Poller实例
-        Poller *Poller::newDefaultPoller(EventLoop *loop) {
-        if (::getenv("MUDUO_USE_POLL")) {
-            // 如果环境变量"MUDUO_USE_POLL"被设置，则返回nullptr，表示使用poll
-            return new PollPoller(loop); // 生成poll的实例
-        } else {
-            // 否则，返回EPollPoller的实例，表示使用epoll
-            return new EPollPoller(loop); // 生成epoll的实例
-        }
-        }
-        ```
-- `Acceptor` 负责 `accept` 新连接，并通过回调最终执行 `TcpServer::newConnection()` 方法将新连接分发到 `subReactor` 中
-- `Channel` 类的作用是封装文件描述符和它的事件处理（如读、写、关闭等），并负责将这些事件分发给对应的回调函数进行处理（可以说每一个**事件/文件描述符**都对应着一个`channel`）
-
-### 3.2 简单示例
-
-一个典型的 `muduo` 的 `TcpServer` 工作流程如下：
-
-1. 创建一个事件循环 `EventLoop` 对象
-2. 建立对应的业务服务器 `TcpServer` 对象，将 `EventLoop` 对象传入
-3. 设置 `TcpServer` 对象的 `Callback` 函数
-4. 启动 `TcpServer` 对象
-5. 开启事件循环
-
-```cpp
-#include <muduo/net/EventLoop.h>
-#include <muduo/net/TcpServer.h>
-#include <string>
-using namespace muduo;
-using namespace muduo::net;
-
-void onMessage(const TcpConnectionPtr &conn, Buffer *buf, Timestamp time) {
-  // std::string msg(buf->retrieveAllAsString());
-  // conn->send(msg);
-  conn->send(buf);
-}
-
-int main() {
-  EventLoop loop;
-  InetAddress listenAddr(9981);
-  TcpServer server(&loop, listenAddr, "EchoServer");
-  server.setMessageCallback(onMessage);
-  server.start();
-  loop.loop();
-  return 0;
-}
-```
-
-编译：`g++ -g -o echo_server echo_server.cc -lmuduo_net -lmuduo_base -lpthread`
-
-### 3.3 事件处理
-
-陈硕认为，TCP 网络编程的本质是处理**三个半事件**，即：
+muduo 作者认为，TCP 网络编程的本质是处理**三个半事件**，即：
 
 1. 连接的建立
 2. 连接的断开：包括主动断开和被动断开
 3. 消息到达，文件描述符可读。
-4. 消息发送完毕。这个算半个事件。
+4. 消息发送完毕，这个算半个事件。
 
-#### 3.3.1 连接的建立
+#### 2.2.1 连接的建立
 
-当单纯使用 linux 的 API，编写一个简单的 Tcp 服务器时，建立一个新的连接通常需要四步：
+当单纯使用 linux 的 API，编写一个简单的 Tcp 服务器时，建立一个新的连接通常需要四步：`socket()`、`bind()`、`listen()`、`accept()`。
 
-> 步骤 1. `socket()`  // 调用 `socket` 函数建立监听 `socket`
-> 
-> 步骤 2. `bind()`    // 绑定地址和端口
-> 
-> 步骤 3. `listen()`  // 开始监听端口
-> 
-> 步骤 4. `accept()`  // 返回新建立连接的 `fd`
-
------
-
-首先在 `TcpServer` 对象构建时，`TcpServer` 的属性 `acceptor` 同时也被建立。
-
-在 `Acceptor` 的构造函数中分别调用了 `socket` 函数和 `bind` 函数完成了**步骤 1 和步骤 2**。
-
-即，当 `TcpServer server(&loop, listenAddr)` 执行结束时，监听 `socket` 已经建立好，并已绑定到对应地址和端口了。
-
-----
-
-而当执行 `server.start()` 时，主要做了两个工作：
-
-1. 在监听 `socket` 上启动 `listen` 函数，也就是**步骤 3**；
-2. 将监听 `socket` 的可读事件注册到 `EventLoop` 中。
+1. `TcpServer` 对象构建时，`TcpServer` 的属性 `acceptor` 同时也被建立。
+2. `Acceptor` 的构造函数中分别调用了 `socket` 函数和 `bind` 函数完成了**步骤 1 和步骤 2**。
+   > 即，当 `TcpServer server(&loop, listenAddr)` 执行结束时，监听 `socket` 已经建立好，并已绑定到对应地址和端口了。
+3. 当执行 `server.start()` 时，主要做了两个工作：
+   1. 在监听 `socket` 上启动 `listen` 函数，也就是**步骤 3**；
+   2. 将监听 `socket` 的可读事件注册到 `EventLoop` 中。
 
 此时，程序已完成对 `socket` 的监听，但还不够，因为此时程序的主角 `EventLoop` 尚未启动。当调用 `loop.loop()` 时，程序开始循环监听该 `socket` 的可读事件。
 
-当新连接请求建立时，可读事件触发，此时该事件对应的 `callback` 在 `EventLoop::loop()` 中被调用。该事件的 `callback` 实际上就是 `Acceptor::handleRead()` 方法（**不过是经过了重重绑定**）。
+---
+
+当新连接请求建立时，可读事件触发，此时该事件对应的 `callback` 在 `EventLoop::loop()` 中被调用。该事件的 `callback` 实际上就是 `Acceptor::handleRead()` 方法。
 
 在 `Acceptor::handleRead()` 方法中，做了三件事：
 
 1. 调用了 `accept` 函数，完成了**步骤 4**，实现了连接的建立。得到一个已连接 `socket` 的 `fd`。
-2. 创建 `TcpConnection` 对象。
-3. 将已连接 `socket` 的可读事件注册到 `EventLoop` 中。
+2. 将新连接的 fd 设置为非阻塞模式
+3. 调用 `TcpServer::newConnection()` 方法
+   1. 使用轮询算法，从线程池中选择一个事件循环（EventLoop）来管理新的 channel
+   2. 根据连接成功的 sockfd，创建 TcpConnection 对象
+   3. 设置 TcpConnection 的各种回调函数
+   4. 在对应的 loop 中执行 `TcpConnection::connectEstablished()` 方法
+      1. 将 channel 和 TcpConnection 绑定
+      2. 启用 channel 的读事件
+      3. 调用 connectionCallback_ 回调函数
 
 这里还有一个需要注意的点，创建的 `TcpConnnection` 对象是个 `shared_ptr`，该对象会被保存在 `TcpServer` 的 `connections` 中。这样才能保证引用计数大于 `0`，对象不被释放。
 
-至此，一个新的连接已完全建立好，该连接的 `socket` 可读事件也已注册到 `EventLoop` 中了。
+至此，一个新的连接已完全建立好，该连接的 `socket` **可读事件**也已注册到对应的 `EventLoop` 中了
 
-#### 3.3.2 消息的读取
+#### 2.2.2 消息的读取
 
 假如客户端发送消息，导致已连接 `socket` 的可读事件触发，该事件对应的 `callback` 同样也会在 `EventLoop::loop()` 中被调用。
 
 该事件的 `callback` 实际上就是 `TcpConnection::handleRead` 方法。在 `TcpConnection::handleRead` 方法中，主要做了两件事：
 
-1. 从 `socket` 中读取数据，并将其放入 `inputbuffer` 中
+1. 从 `socket` 中读取数据，并将其放入 `inputbuffer` 
 2. 调用 `messageCallback`，执行业务逻辑。
 
-  ```cpp
-  int savedErrno = 0; // 用于保存读取过程中可能发生的错误码
-  ssize_t n = inputBuffer_.readFd(
-      channel_->fd(),
-      &savedErrno); // 从channel对应的文件描述符中读取数据到inputBuffer_
-
-  if (n > 0) // 如果读取的数据长度大于0
-  {
-    // 已建立连接的用户，有可读事件发生了，调用用户传入的回调操作onMessage
-    messageCallback_(shared_from_this(), &inputBuffer_, receiveTime);
-    // messageCallback_ 是用户定义的回调函数，用于处理接收到的数据
-    // shared_from_this() 返回一个指向当前TcpConnection对象的shared_ptr
-    // &inputBuffer_ 是指向输入缓冲区的指针，receiveTime 是数据接收的时间戳
-  }
-  ```
-
-`messageCallback` 是在建立新连接时，将 `TcpServer::messageCallback` 方法 `bind` 到了 `TcpConnection::messageCallback` 的方法。
-
-`TcpServer::messageCallback` 就是业务逻辑的主要实现函数。通常情况下，我们可以在里面实现消息的编解码、消息的分发等工作，这里就不再深入探讨了。
-
-在我们上面给出的示例代码中，`echo-server` 的 `messageCallback` 非常简单，就是直接将得到的数据，重新 `send` 回去。**在实际的业务处理中，一般都会调用 `TcpConnection::send()` 方法，给客户端回复消息**。
-
-这里需要注意的是，在 `messageCallback` 中，用户会有可能会把任务抛给自定义的 `Worker` 线程池处理。
-但是这个在 `Worker` 线程池中任务，切忌直接对 `Buffer` 的操作。因为 `Buffer` 并不是线程安全的。
-
-我们需要记住一个准则:
-
-> **所有对 `IO` 和 `buffer` 的读写，都应该在 `IO` 线程中完成**。
-
-一般情况下，先在交给 `Worker` 线程池之前，应该现在 `IO` 线程中把 `Buffer` 进行切分解包等动作。将解包后的消息交由线程池处理，避免多个线程操作同一个资源。
-
-
-#### 3.3.3 消息的发送
+#### 2.2.3 消息的发送
 
 用户通过调用 `TcpConnection::send()` 向客户端回复消息。由于 `muduo` 中使用了 `OutputBuffer`，因此消息的发送过程比较复杂。
 
@@ -190,21 +102,13 @@ int main() {
 因此，`TcpConnection::send` 必须要保证线程安全性，它是这么做的：
 
 ```cpp
-// 发送数据的函数
 void TcpConnection::send(const std::string &buf) {
-  // 只有当连接状态为已连接时才进行发送操作
-  if (state_ == kConnected) {
-    // 如果当前线程是事件循环所属的线程
-    if (loop_->isInLoopThread()) {
-      // 直接调用sendInLoop函数发送数据
+  if (state_ == kConnected)
+    if (loop_->isInLoopThread())
       sendInLoop(buf.c_str(), buf.size());
-    } else {
-      // 否则，将发送操作投递到事件循环中执行
+    else
       loop_->runInLoop(
           std::bind(&TcpConnection::sendInLoop, this, buf.c_str(), buf.size()));
-      // 使用std::bind将sendInLoop函数绑定到当前对象，并传递数据指针和大小参数
-    }
-  }
 }
 ```
 检测 `send` 的时候，是否在当前 IO 线程，如果是的话，直接进行写相关操作 `sendInLoop`。如果不在一个线程的话，需要将该任务抛给 IO 线程执行 `runInloop`, 以保证 `write` 动作是在 IO 线程中执行的。
@@ -216,7 +120,7 @@ void TcpConnection::send(const std::string &buf) {
 3. 如果此时 `OutputBuffer` 中的旧数据的个数和未写完字节个数之和大于 `highWaterMark`，则将 `highWaterMarkCallback` 放入待执行队列中
 4. 将对应 `socket` 的可写事件注册到 `EventLoop` 中
 
-> 注意：直到发送消息的时候，`muduo` 才会把 `socket` 的可写事件注册到了 `EventLoop` 中。在此之前只注册了可读事件。
+> **注意：直到发送消息的时候，`muduo` 才会把 `socket` 的可写事件注册到了 `EventLoop` 中。在此之前只注册了可读事件。**
 
 连接 `socket` 的可写事件对应的 `callback` 是 `TcpConnection::handleWrite()`。当某个 `socket` 的可写事件触发时，`TcpConnection::handleWrite` 会做两个工作：
 
@@ -231,8 +135,7 @@ void TcpConnection::send(const std::string &buf) {
 
 此外，`highWaterMarkCallback` 和 `writeCompleteCallback` 一般配合使用，起到限流的作用。
 
-
-#### 3.3.4 连接的断开
+#### 2.2.4 连接的断开
 
 连接的断开分为被动断开和主动断开。主动断开和被动断开的处理方式基本一致。
 
@@ -247,38 +150,35 @@ void TcpConnection::send(const std::string &buf) {
 3. 将对应的 `TcpConnection` 对象从 `Server` 移除。
 4. `close` 对应的 `fd`。此步骤是在析构函数中自动触发的，当 `TcpConnection` 对象被移除后，引用计数为 0，对象析构时会调用 `close`。
 
-### 3.4 `runInLoop` 的实现
+### 2.3 `runInLoop` 的实现
 
 在消息的发送过程，为保证对 `buffer` 和 `socket` 的写动作是在 IO 线程中进行，使用了一个 `runInLoop` 函数，将该写任务抛给了 IO 线程处理。此处看下 `runInLoop` 的实现。
 
 ```cpp
-// 在当前loop中执行cb
 void EventLoop::runInLoop(Functor cb) {
-  if (isInLoopThread()) // 在当前的loop线程中，执行cb
-  {
-    cb();
-  } else // 在非当前loop线程中执行cb , 就需要唤醒loop所在线程，执行cb
-  {
-    queueInLoop(cb);
-  }
+  isInLoopThread() ? cb() : queueInLoop(cb);
 }
 ```
 
 这里可以看到，做了一层判断。如果调用时是此 `EventLoop` 的运行线程，则直接执行此函数。否则调用 `queueInLoop` 函数。`queueInLoop` 的实现如下：
 
 ```cpp
-// 把cb放入队列中，唤醒loop所在的线程，执行cb
+// 把 cb 放入 pendingFunctors_，唤醒 loop 所在的线程，执行 cb
 void EventLoop::queueInLoop(Functor cb) {
   {
     std::unique_lock<std::mutex> lock(mutex_);
     pendingFunctors_.emplace_back(cb);
   }
 
-  // 唤醒相应的，需要执行上面回调操作的loop的线程
-  // callingPendingFunctors_的意思是：当前loop正在执行回调，但是loop又有了新的回调
-  if (!isInLoopThread() || callingPendingFunctors_) {
-    wakeup(); // 唤醒loop所在线程
-  }
+  /* 1. 如果调用 queueInLoop() 和 EventLoop 不在同一个线程，或者
+   *    callingPendingFunctors_ 为 true 时（此时正在执行
+   *    doPendingFunctors()，即正在执行回调），则唤醒 loop 所在的线程
+   * 2. 如果调用 queueInLoop() 和 EventLoop 在同一个线程，但是
+   *    callingPendingFunctors_ 为 false 时，则说明：此时尚未执行到
+   *    doPendingFunctors()。
+   *    不必唤醒，这个优雅的设计可以减少对 eventfd 的 I/O 读写 */
+  if (!isInLoopThread() || callingPendingFunctors_)
+    wakeup();
 }
 ```
 
@@ -292,7 +192,7 @@ void EventLoop::queueInLoop(Functor cb) {
 - `wakeup` 是怎么实现的?
 - `pendingFunctors_` 是如何被消费的?
 
-### 3.5 为什么要唤醒 `EventLoop`
+### 2.4 为什么要唤醒 `EventLoop`
 
 我们首先调用了 `pendingFunctors_.push_back(cb)`, 将该函数放在 `pendingFunctors_` 中。`EventLoop` 的每一轮循环在最后会调用 `doPendingFunctors` 依次执行这些函数。
 
@@ -300,7 +200,7 @@ void EventLoop::queueInLoop(Functor cb) {
 
 所以必须要唤醒 `EventLoop` ，从而让 `pendingFunctors_` 中的任务尽快被执行。
 
-### 3.6 `wakeup` 是怎么实现的
+### 2.5 `wakeup` 是怎么实现的
 
 `muduo` 这里采用了对 `eventfd` 的读写来实现对 `EventLoop` 的唤醒。
 
@@ -309,37 +209,34 @@ void EventLoop::queueInLoop(Functor cb) {
 `wakeup()` 的过程本质上是对这个 `eventfd` 进行写操作，以触发该 `eventfd` 的可读事件。这样就起到了唤醒 `EventLoop` 的作用。
 
 ```cpp
-// 用来唤醒loop所在的线程的
-// 向wakeupfd_写一个数据，wakeupChannel就发生读事件，当前loop线程就会被唤醒
+/* 向 wakeupfd_ 写一个数据，wakeupChannel 就发生读事件
+ * 对应的 loop 线程就会被唤醒 */
 void EventLoop::wakeup() {
   uint64_t one = 1;
   ssize_t n = write(wakeupFd_, &one, sizeof one);
-  if (n != sizeof one) {
+  if (n != sizeof one)
     LOG_ERROR("EventLoop::wakeup() writes %lu bytes instead of 8 \n", n);
-  }
 }
 ```
 
 很多库为了兼容 `macOS`，往往使用 `pipe` 来实现这个功能。`muduo` 采用了 `eventfd`，性能更好些，但代价是不能支持 `macOS` 了。
 
-### 3.7 `doPendingFunctors` 的实现
+### 2.6 `doPendingFunctors` 的实现
 
 本部分为 `doPendingFunctors` 的实现，`muduo` 是如何处理这些待处理的函数的，以及中间用了哪些优化操作。
 
 ```cpp
-void EventLoop::doPendingFunctors() // 执行回调
-{
+void EventLoop::doPendingFunctors() {
   std::vector<Functor> functors;
   callingPendingFunctors_ = true;
 
-  {
+  { // 通过 swap 减小临界区长度
     std::unique_lock<std::mutex> lock(mutex_);
     functors.swap(pendingFunctors_);
   }
 
-  for (const Functor &functor : functors) {
-    functor(); // 执行当前loop需要执行的回调操作
-  }
+  for (const Functor &functor : functors)
+    functor(); // 执行当前 loop 需要执行的回调操作
 
   callingPendingFunctors_ = false;
 }
@@ -355,9 +252,7 @@ void EventLoop::doPendingFunctors() // 执行回调
 
 ```cpp
 if (!isInLoopThread() || callingPendingFunctors_)
-{
   wakeup();
-}
 ```
 
 这里还需要结合下 `EventLoop` 循环的实现，其中 `doPendingFunctors()` 是**每轮循环的最后一步处理**。
