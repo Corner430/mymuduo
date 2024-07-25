@@ -11,25 +11,26 @@
 > 建议结合 commit 记录和开发日志阅读，**务必重视开发日志**
 
 涉及技术栈：
+
 - I/O 多路复用、TCP/IP 网络编程、Reactor 模型
 - 智能指针、基于宏定义的日志系统、Buffer 缓冲区、四大类型转换
 - 多线程编程、通过 `eventfd` 进行线程间通信、信号量
 - 系统调用：`getenv`, `syscall(SYS_gettid)`，分支预测：`__builtin_expect`
 - 连接半关闭、`move` 语义、`explicit`、`__thread` 等
 
-> 详细技术设计参见[开发日志](https://github.com/Corner430/mymuduo/blob/main/logs.md)和源码注释
+> 详细技术涉及参见[开发日志](https://github.com/Corner430/mymuduo/blob/main/logs.md)和源码注释
 
 ## 1 先修知识
 
 - muduo 网络库的使用 参见[chatserver-muduo](https://github.com/Corner430/chatserver/tree/main?tab=readme-ov-file#5-muduo-网络库)
 
-- I/O 多路复用 参见[小林coding](https://xiaolincoding.com/os/8_network_system/selete_poll_epoll.html#最基本的-socket-模型)和[blog I/O多路复用](https://blog.corner430.eu.org/2024/07/21/I-O-多路复用/#more)
+- I/O 多路复用 参见[小林 coding](https://xiaolincoding.com/os/8_network_system/selete_poll_epoll.html#最基本的-socket-模型)和[blog I/O 多路复用](https://blog.corner430.eu.org/2024/07/21/I-O-多路复用/#more)
 
 - [4 种 I/O 模式：阻塞、非阻塞、同步、异步](https://blog.corner430.eu.org/2024/07/21/4-种-I-O-模式：阻塞、非阻塞、同步、异步/#more)
 
 - [Unix/Linux 上的五种 IO 模型](https://blog.corner430.eu.org/2024/07/21/Unix-Linux-上的五种-IO-模型/#more)
 
-- Reactor 模型 参见[小林coding](https://xiaolincoding.com/os/8_network_system/reactor.html#reactor)
+- Reactor 模型 参见[小林 coding](https://xiaolincoding.com/os/8_network_system/reactor.html#reactor)
 
 - [优秀的网络服务器设计](https://blog.corner430.eu.org/2024/07/24/优秀的网络服务器设计思路/#more)
 
@@ -79,7 +80,7 @@ muduo 作者认为，TCP 网络编程的本质是处理**三个半事件**，即
    4. 在对应的 loop 中执行 `TcpConnection::connectEstablished()` 方法
       1. 将 channel 和 TcpConnection 绑定
       2. 启用 channel 的读事件
-      3. 调用 connectionCallback_ 回调函数
+      3. 调用 connectionCallback\_ 回调函数
 
 这里还有一个需要注意的点，创建的 `TcpConnnection` 对象是个 `shared_ptr`，该对象会被保存在 `TcpServer` 的 `connections` 中。这样才能保证引用计数大于 `0`，对象不被释放。
 
@@ -91,7 +92,7 @@ muduo 作者认为，TCP 网络编程的本质是处理**三个半事件**，即
 
 该事件的 `callback` 实际上就是 `TcpConnection::handleRead` 方法。在 `TcpConnection::handleRead` 方法中，主要做了两件事：
 
-1. 从 `socket` 中读取数据，并将其放入 `inputbuffer` 
+1. 从 `socket` 中读取数据，并将其放入 `inputbuffer`
 2. 调用 `messageCallback`，执行业务逻辑。
 
 #### 2.2.3 消息的发送
@@ -111,6 +112,7 @@ void TcpConnection::send(const std::string &buf) {
           std::bind(&TcpConnection::sendInLoop, this, buf.c_str(), buf.size()));
 }
 ```
+
 检测 `send` 的时候，是否在当前 IO 线程，如果是的话，直接进行写相关操作 `sendInLoop`。如果不在一个线程的话，需要将该任务抛给 IO 线程执行 `runInloop`, 以保证 `write` 动作是在 IO 线程中执行的。
 
 在 `sendInloop` 中，做了下面几件事：
@@ -186,7 +188,7 @@ void EventLoop::queueInLoop(Functor cb) {
 
 1. 加锁，然后将该函数放到该 `EventLoop` 的 `pendingFunctors_` 队列中。
 2. 判断是否要唤醒 `EventLoop`，如果是则调用 `wakeup()` 唤醒该 `EventLoop`。
-这里有几个问题：
+   这里有几个问题：
 
 - 为什么要唤醒 `EventLoop`？
 - `wakeup` 是怎么实现的?
