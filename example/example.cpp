@@ -8,33 +8,29 @@ class EchoServer {
 public:
   EchoServer(EventLoop *loop, const InetAddress &addr, const std::string &name)
       : server_(loop, addr, name), loop_(loop) {
-    server_.setConnectionCallback( // 注册回调函数
+    server_.setConnectionCallback(
         std::bind(&EchoServer::onConnection, this, std::placeholders::_1));
-
     server_.setMessageCallback(
         std::bind(&EchoServer::onMessage, this, std::placeholders::_1,
                   std::placeholders::_2, std::placeholders::_3));
-
-    // 设置合适的 loop 线程数量
-    server_.setThreadNum(3);
+    server_.setThreadNum(3); // 设置合适的 loop 线程数量
   }
   void start() { server_.start(); }
 
 private:
   // 连接建立或者断开的回调
   void onConnection(const TcpConnectionPtr &conn) {
-    if (conn->connected()) {
+    if (conn->connected())
       LOG_INFO("Connection UP : %s", conn->peerAddress().toIpPort().c_str());
-    } else {
+    else
       LOG_INFO("Connection DOWN : %s", conn->peerAddress().toIpPort().c_str());
-    }
   }
 
   // 可读写事件回调
   void onMessage(const TcpConnectionPtr &conn, Buffer *buf, Timestamp time) {
     std::string msg = buf->retrieveAllAsString();
     conn->send(msg);
-    conn->shutdown(); // 写端   EPOLLHUP =》 closeCallback_
+    // conn->shutdown();
   }
 
   EventLoop *loop_;
@@ -44,12 +40,8 @@ private:
 int main() {
   EventLoop loop;
   InetAddress addr(8000);
-  EchoServer server(
-      &loop, addr,
-      "EchoServer-01"); // Acceptor non-blocking listenfd  create bind
-  server
-      .start(); // listen  loopthread  listenfd => acceptChannel => mainLoop = >
-  loop.loop();  // 启动 mainLoop 的底层 Poller
-
+  EchoServer server(&loop, addr, "EchoServer-01");
+  server.start();
+  loop.loop();
   return 0;
 }
