@@ -42,6 +42,9 @@
 - `EventLoop`：事件循环，等价于 Reactor 模型中的 Reactor
 - `Acceptor`：运行在 `mainLoop` 中，负责监听新连接，并回调 `TcpServer::newConnection()` 方法将新连接分发到 `subReactor` 中
 - `Poller`：`epoll` 的抽象类，含有 `ChannelMap`，保存了 `Channel` 和 `fd` 的映射关系，每个 `EventLoop` 对象都有一个 `Poller` 对象，每个 `Poller` 对象都有一个 `ChannelMap` 对象。负责监听 `fd` 的可读写事件
+- `Channel`：对 `sockfd` 和 `sockfd` 上感兴趣以及发生的事件进行封装，向 Poller 注册事件
+
+> Channel 和 Poller 无法直接互相操作，但是二者都是 EventLoop 的成员变量，可以借此完成相互操作
 
 ### 2.2 事件处理
 
