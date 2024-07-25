@@ -16,7 +16,7 @@
 - 智能指针、基于宏定义的日志系统、Buffer 缓冲区、四大类型转换
 - 多线程编程、通过 `eventfd` 进行线程间通信、信号量
 - 系统调用：`getenv`, `syscall(SYS_gettid)`，分支预测：`__builtin_expect`
-- 连接半关闭、`move` 语义、`explicit`、`__thread` 等
+- 连接半关闭、`move` 语义、`explicit`、`__thread`、`snprintf`、`sprintf` 等
 
 > 详细技术涉及参见[开发日志](https://github.com/Corner430/mymuduo/blob/main/logs.md)和源码注释
 
