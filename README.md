@@ -79,7 +79,7 @@ muduo 作者认为，TCP 网络编程的本质是处理**三个半事件**，即
 3. 调用 `TcpServer::newConnection()` 方法
    1. 使用轮询算法，从线程池中选择一个事件循环（EventLoop）来管理新的 channel
    2. 根据连接成功的 sockfd，创建 TcpConnection 对象
-   3. 设置 TcpConnection 的各种回调函数
+   3. 设置 TcpConnection 的各种回调函数，尤其注意会绑定 `TcpConnection::removeConnection()` 方法到 `closeCallback_` 上
    4. 在对应的 loop 中执行 `TcpConnection::connectEstablished()` 方法
       1. 将 channel 和 TcpConnection 绑定
       2. 启用 channel 的读事件
