@@ -35,7 +35,7 @@ TcpServer::~TcpServer() {
     // 这个局部的 shared_ptr 智能指针对象，出右括号，
     // 可以自动释放 new 出来的 TcpConnection 对象资源
     TcpConnectionPtr conn(item.second);
-    item.second.reset();
+    item.second.reset(); // 不再使用这个 shared_ptr
 
     conn->getLoop()->runInLoop(
         std::bind(&TcpConnection::connectDestroyed, conn));
