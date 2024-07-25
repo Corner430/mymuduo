@@ -133,7 +133,8 @@
     2. 如果调用 `queueInLoop()` 和 EventLoop 在同一个线程，但是 `callingPendingFunctors_` 为 `false` 时，则说明：此时尚未执行到 `doPendingFunctors()`。**不必唤醒，这个优雅的设计可以减少对 `eventfd` 的 IO 读写**
 9. `Poller` 的 `poll()` 方法监听两种 `fd`：`wakeupFd_` 和 `epollfd_`
 10. **跨线程调用 `quit()` 方法，通过 `wakeup()` 方法唤醒 `subLoop`，实现跨线程唤醒**
-11. EventLoop 跨线程通信也可以使用 **生产者-消费者** 模型，mainLoop 作为生产者，subLoop 作为消费者。**muduo 是通过 `wakeupFd_` 来直接通信，非常巧妙**
+11. EventLoop 跨线程通信也可以使用 **生产者-消费者** 模型，mainLoop 作为生产者，subLoop 作为消费者。**muduo 是通过 `wakeupFd_` 来直接通信，非常巧妙。每一个 EventLoop 都会有一个自己的 `wakeupFd_`，mainLoop 只需要向 subLoop 的 `wakupFd_` 写入数据，就可以唤醒 subLoop**
+12. 每一个 EventLoop 在创建时都会有一个 `threadId_`，用来判断当前 loop 和线程是否对应
 
 ### 12 Thread 类
 
