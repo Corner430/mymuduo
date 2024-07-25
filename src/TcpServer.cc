@@ -47,7 +47,7 @@ void TcpServer::setThreadNum(int numThreads) {
   threadPool_->setThreadNum(numThreads);
 }
 
-// 开启服务器监听，loop.loop()
+// 开启服务器监听
 void TcpServer::start() {
   if (started_++ == 0) { // 防止一个 TcpServer 对象被 start 多次
     threadPool_->start(threadInitCallback_); // 启动底层的 loop 线程池
