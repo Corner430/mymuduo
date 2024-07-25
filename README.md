@@ -287,3 +287,12 @@ std::vector<Functor> functors;
 如果不这么做，直接遍历 `pendingFunctors_`, 然后处理对应的函数。这样的话，锁会一直等到所有函数处理完才会被释放。在此期间，`queueInLoop` 将不可用。
 
 而以上的写法，可以极大减小锁范围，整个锁的持有时间就是 `swap` 那一下的时间。待处理函数执行的时候，其他线程还是可以继续调用 `queueInLoop`。
+
+## 3 扩展
+
+1. TcpClient 编写客户端类
+2. 支持定时事件 TimerQueue
+3. DNS, HTTP, RCP
+4. 丰富的使用示例：examples 文件夹
+5. 服务器性能测试
+   1. 服务器性能测试工具：`wrk`, `JMeter`
