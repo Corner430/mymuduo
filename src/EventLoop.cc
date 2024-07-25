@@ -52,7 +52,7 @@ EventLoop::~EventLoop() {
 
 void EventLoop::loop() {
   looping_ = true;
-  quit_ = false; // FIXME: what if someone calls quit() before loop() ?
+  quit_ = false;
 
   LOG_INFO("EventLoop %p start looping \n", this);
 
@@ -63,7 +63,6 @@ void EventLoop::loop() {
     // epoll_ctl() 操作，并获取发生事件的时间戳和 activeChannels_
     pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);
 
-    // TODO sort channel by priority
     for (Channel *channel : activeChannels_)
       channel->handleEvent(pollReturnTime_);
 
